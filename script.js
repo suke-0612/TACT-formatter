@@ -99,7 +99,7 @@ const makeTimeTableArray = () => {
 
 // サイト名から曜日・時限、授業名を取得
 const makeLectureData = (siteName) => {
-    const timeData = siteName.match(/\(\d\d\d\d年度(.+)\/(.+)\)/);
+    const timeData = siteName.replace(/\（[\d０-９]{4}年度以降入学者\）/g, "").trim().match(/[\(（]\d\d\d\d年度(.+)[\/／](.+)[\)）]/);
     if (timeData === null) {
         return { term: null, time: null, title: siteName };
     }
@@ -109,9 +109,11 @@ const makeLectureData = (siteName) => {
     if (termStr.length === 3) {
         switch (termStr[1]) {
             case "１":
+            case "1":
                 firstTerm = true;
                 break;
             case "２":
+            case "2":
                 secondTerm = true;
                 break;
         }
@@ -122,12 +124,30 @@ const makeLectureData = (siteName) => {
     if (timeData[2] === "その他") {
         return { term: { first: firstTerm, second: secondTerm }, time: null, title: siteName };
     }
-    const title = siteName.replace(/\(\d\d\d\d年度.+\/.+$/, "");
+    const title = siteName.replace(/[\(\（]\d\d\d\d年度.+[\/／].+$/, "");
     const time = timeData[2].split(",");
+    
+    // 「火3-4限」のような連続時限を展開
+    let expandedTime = [];
+    for (let timeSlot of time) {
+        const match = timeSlot.match(/(.)(\d+)-(\d+)限/);
+        if (match) {
+            const youbi = match[1]; 
+            const start = parseInt(match[2]);
+            const end = parseInt(match[3]);
+
+            for (let i = start; i <= end; i++) {
+                expandedTime.push(`${youbi}${i}限`);
+            }
+        } else {
+            expandedTime.push(timeSlot);
+        }
+    }
+    
     // 曜日・時限の変換
     let timeProcessed = [];
-    for (let i = 0; i < time.length; i++) {
-        const severalTime = time[i];
+    for (let i = 0; i < expandedTime.length; i++) {
+        const severalTime = expandedTime[i];
         timeProcessed.push([]);
         switch (severalTime[0]) {
             case "月":
@@ -151,24 +171,31 @@ const makeLectureData = (siteName) => {
         }
         switch (severalTime[1]) {
             case "１":
+            case "1":
                 timeProcessed[i].push(0);
                 break;
             case "２":
+            case "2":
                 timeProcessed[i].push(1);
                 break;
             case "３":
+            case "3":
                 timeProcessed[i].push(2);
                 break;
             case "４":
+            case "4":
                 timeProcessed[i].push(3);
                 break;
             case "５":
+            case "5":
                 timeProcessed[i].push(4);
                 break;
             case "６":
+            case "6":
                 timeProcessed[i].push(5);
                 break;
             case "７":
+            case "7":
                 timeProcessed[i].push(6);
                 break;
         }
